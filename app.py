@@ -29,8 +29,8 @@ def welcome():
         f"/api/v1.0/precipitation:<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/yyyy-mm-dd<br/>"
-        f"/api/v1.0/<start>/<end>"
+        f"/api/v1.0/date/start<br/>"
+        f"/api/v1.0/date/<start>/<end>"
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -91,22 +91,42 @@ def TOBS():
 
     return jsonify(temp)
 
-@app.route("/api/v1.0/<start>")
-def startd(date):
+@app.route("/api/v1.0/date/<start>")
+@app.route("/api/v1.0/date/<start>/<end>")
+def dates(start=None, end=None):
     """Return a JSON list of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range."""
 
-    start_date = session.query(func.min(measurement.tobs),func.max(measurement.tobs),func.avg(measurement.tobs)).\
-    filter(measurement.station == date).all()
+    session = Session(engine) 
+
+    if end:
+        results = session.query(
+            func.min(measurement.tobs),
+            func.max(measurement.tobs),
+            func.avg(measurement.tobs)).\
+            filter(measurement.date >= start).\
+            filter(measurement.date <= end).\
+            order_by (measurement.date).all()
+
+    else:
+        results = session.query(
+            func.min(measurement.tobs),
+            func.max(measurement.tobs),
+            func.avg(measurement.tobs)).\
+            filter(measurement.date >= start).\
+            order_by (measurement.date).all()
+
+    
     
     
     input_date = []
 
-    for tempmeasure in start_date:
+    for tempmeasure in results:
         sdate_dict = {}
-        sdate_dict["SDATE"] = date
-        sdate_dict["MIN"] = float(tempmeasure[0])
-        sdate_dict["AVG"] = float(tempmeasure[2])
-        sdate_dict["MAX"] = float(tempmeasure[1])
+        sdate_dict["START DATE"] = start
+        sdate_dict["END DATE"] = end
+        sdate_dict["MIN"] = tempmeasure[0]
+        sdate_dict["AVG"] = tempmeasure[2]
+        sdate_dict["MAX"] = tempmeasure[1]
         input_date.append(sdate_dict)
 
     return jsonify(input_date)
